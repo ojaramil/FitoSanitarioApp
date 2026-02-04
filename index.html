@@ -3923,32 +3923,34 @@
             }
 
 
-            // --- Configuración de Navegación ---
-            const navItems = [
-                { id: 'farm-general-data', label: 'Datos Generales Finca' },
-                { id: 'initial-diagnosis', label: 'Diagnóstico Inicial' },
-                { id: 'olive-diseases', label: 'Enfermedades del Olivo' },
-                { id: 'bio-inputs-products', label: 'Bio-insumos y Productos' },
-                { id: 'today-data', label: 'Datos Hoy y Historial' },
-                { id: 'villa-de-leyva-weather', label: 'Clima Villa de Leyva' },
-                { id: 'regenerative-approach', label: 'Enfoque Regenerativo' },
-                { id: 'diagnosis-expert', label: 'Diagnóstico/Experto' },
-                { id: 'data', label: 'Datos' }, // Nueva pestaña 'Data'
-                { id: 'clients-weather', label: 'Clientes' }
-            ];
-
-            navItems.forEach(item => {
-                const button = document.createElement('button');
-                button.className = 'nav-button px-4 py-2 mx-1 bg-[#A3B9A3] text-white rounded-md shadow-sm hover:bg-[#81C784] focus:outline-none focus:ring-2 focus:ring-[#4A6C4B] focus:ring-opacity-50';
-                button.textContent = item.label;
-                button.setAttribute('data-section', item.id);
-                button.addEventListener('click', () => showSectionContent(item.id));
-                navContainer.appendChild(button);
-            });
-
-            // Inicializar con el contenido predeterminado
-            showSectionContent('farm-general-data'); // Iniciar en la sección de datos generales de la finca
         }
+        // --- Configuración de Navegación ---
+        const navItems = [
+            { id: 'farm-general-data', label: 'Datos Generales Finca' },
+            { id: 'initial-diagnosis', label: 'Diagnóstico Inicial' },
+            { id: 'olive-diseases', label: 'Enfermedades del Olivo' },
+            { id: 'bio-inputs-products', label: 'Bio-insumos y Productos' },
+            { id: 'today-data', label: 'Datos Hoy y Historial' },
+            { id: 'villa-de-leyva-weather', label: 'Clima Villa de Leyva' },
+            { id: 'regenerative-approach', label: 'Enfoque Regenerativo' },
+            { id: 'diagnosis-expert', label: 'Diagnóstico/Experto' },
+            { id: 'data', label: 'Datos' }, // Nueva pestaña 'Data'
+            { id: 'clients-weather', label: 'Clientes' }
+        ];
+
+        navItems.forEach(item => {
+            const button = document.createElement('button');
+            button.className = 'nav-button px-4 py-2 mx-1 bg-[#A3B9A3] text-white rounded-md shadow-sm hover:bg-[#81C784] focus:outline-none focus:ring-2 focus:ring-[#4A6C4B] focus:ring-opacity-50';
+            button.textContent = item.label;
+            button.setAttribute('data-section', item.id);
+            button.addEventListener('click', () => showSectionContent(item.id));
+            navContainer.appendChild(button);
+        });
+
+        // Inicializar con el contenido predeterminado
+        showSectionContent('farm-general-data'); // Iniciar en la sección de datos generales de la finca
+        showSectionContent('farm-general-data'); // Iniciar en la sección de datos generales de la finca
+    });
     </script>
 </body>
 
