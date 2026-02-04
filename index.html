@@ -1220,6 +1220,16 @@
                         el.addEventListener('click', () => selectFarm(farmId, farm));
                         farmListContainer.appendChild(el);
                     });
+
+                    // AUTO-SELECCIÓN: Si hay un farm guardado en localStorage, seleccionarlo automáticamente
+                    const savedFarmId = localStorage.getItem('currentFarmId');
+                    if (savedFarmId) {
+                        const savedFarmDoc = querySnapshot.docs.find(d => d.id === savedFarmId);
+                        if (savedFarmDoc) {
+                            console.log("Auto-seleccionando finca guardada:", savedFarmId);
+                            selectFarm(savedFarmId, savedFarmDoc.data());
+                        }
+                    }
                 });
 
             } catch (error) {
@@ -1234,6 +1244,9 @@
             // Actualizar datos globales básicos visuales
             window.farmProfileData = { ...farmData };
 
+            // Guardar ID en LocalStorage para persistencia
+            localStorage.setItem('currentFarmId', farmId);
+
             // Cerrar modal
             farmSelectorModal.classList.remove('active');
 
@@ -1243,9 +1256,8 @@
             // Notificar que ya estamos listos en una finca
             console.log(`Finca seleccionada: ${farmData.farmName} (${farmId})`);
 
-            // Actualizar UI principal con nombre de finca si existe un elemento para ello (opcional)
-            const navContainer = document.getElementById('nav-container');
-            // Si quisiéramos poner el nombre de la finca en el header, lo haríamos aquí
+            // REFRESCAR DASHBOARD
+            renderTodayData();
         }
 
         async function loadSelectedFarmProfile() {
@@ -1485,8 +1497,8 @@
             contentElement.textContent = 'Generando análisis experto...';
             responseContainerElement.classList.remove('hidden');
 
-            const apiKey = ""; // La clave API es inyectada por el entorno de Canvas
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            const apiKey = "AIzaSyBwNVjdlVku_1OHstcMhGULXoFBxigwFIs"; // La clave API es inyectada por el entorno de Canvas
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
 
@@ -1681,7 +1693,24 @@
                     </div>
                     <div class="col-span-1 md:col-span-2">
                         <label for="farm-gps-input" class="block text-gray-700 font-semibold mb-2">Coordenadas GPS (Latitud, Longitud):</label>
-                        <input type="text" id="farm-gps-input" class="p-2 border border-gray-300 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-[#4A6C4B]" placeholder="Ej. 5.6383, -73.5350">
+                        <div class="flex gap-2">
+                            <input type="text" id="farm-gps-input" class="p-2 border border-gray-300 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-[#4A6C4B]" placeholder="Ej. 5.6383, -73.5350">
+                            <button id="btn-detect-farm-location" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors whitespace-nowrap">
+                                📍 Detectar y Clima
+                            </button>
+                        </div>
+                        
+                        <!-- Weather Preview Section -->
+                        <div id="farm-weather-preview" class="mt-4 p-4 bg-blue-50 rounded-md border border-blue-200 hidden">
+                            <h4 class="font-bold text-blue-800 mb-2">🌤️ Condiciones Climáticas Actuales (Detectadas):</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-blue-900">
+                                <div><span class="font-semibold">Temp:</span> <span id="fw-temp">--</span></div>
+                                <div><span class="font-semibold">Humedad:</span> <span id="fw-humidity">--</span></div>
+                                <div><span class="font-semibold">Lluvia:</span> <span id="fw-rain">--</span></div>
+                                <div><span class="font-semibold">Viento:</span> <span id="fw-wind">--</span></div>
+                            </div>
+                            <p class="text-xs text-blue-600 mt-2 italic">* Estos datos se guardarán como referencia de la ubicación.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -1769,6 +1798,61 @@
             const farmDataLoading = document.getElementById('farm-data-loading');
             const farmDataMessage = document.getElementById('farm-data-message');
             const userIdDisplayFarm = document.getElementById('user-id-display-farm');
+
+            // Nuevas Referencias para Detectar Ubicación y Clima
+            const btnDetectFarmLocation = document.getElementById('btn-detect-farm-location');
+            const farmWeatherPreview = document.getElementById('farm-weather-preview');
+            const fwTemp = document.getElementById('fw-temp');
+            const fwHumidity = document.getElementById('fw-humidity');
+            const fwRain = document.getElementById('fw-rain');
+            const fwWind = document.getElementById('fw-wind');
+
+            // --- Listener: Detectar Ubicación y Clima ---
+            if (btnDetectFarmLocation) {
+                btnDetectFarmLocation.addEventListener('click', () => {
+                    const originalText = btnDetectFarmLocation.textContent;
+                    btnDetectFarmLocation.textContent = "⏳ Detectando...";
+                    btnDetectFarmLocation.disabled = true;
+
+                    navigator.geolocation.getCurrentPosition(async (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+
+                        // 1. Llenar GPS
+                        farmGpsInput.value = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+
+                        // 2. Traer Clima
+                        const weather = await fetchOpenMeteoWeather(lat, lon);
+
+                        if (weather) {
+                            // 3. Mostrar Clima
+                            fwTemp.textContent = weather.temp;
+                            fwHumidity.textContent = weather.humidity;
+                            fwRain.textContent = weather.precipitation;
+                            fwWind.textContent = weather.wind;
+
+                            farmWeatherPreview.classList.remove('hidden');
+
+                            // GUARDAR EN GLOBAL Y LOCALSTORAGE PARA DIAGNÓSTICO
+                            window.detectedWeather = weather;
+                            localStorage.setItem('detectedWeather', JSON.stringify(weather));
+                            console.log("Clima guardado en LocalStorage:", weather);
+                        }
+
+                        btnDetectFarmLocation.textContent = "✅ Actualizado";
+                        setTimeout(() => {
+                            btnDetectFarmLocation.textContent = originalText;
+                            btnDetectFarmLocation.disabled = false;
+                        }, 2000);
+
+                    }, (error) => {
+                        console.error("Error GPS Finca:", error);
+                        alert("No se pudo obtener la ubicación. Verifica permisos o intenta simular en la pantalla principal.");
+                        btnDetectFarmLocation.textContent = originalText;
+                        btnDetectFarmLocation.disabled = false;
+                    });
+                });
+            }
 
             const updateWordCounter = () => {
                 const words = farmDescriptionInput.value.trim().split(/\s+/).filter(word => word.length > 0).length;
@@ -2127,6 +2211,28 @@
                 farmDataMissingMessage.classList.remove('hidden');
             }
 
+            // --- AUTO-RELLENADO CON CLIMA DETECTADO (DESDE DATOS GENERALES) ---
+            let detectedW = window.detectedWeather;
+            if (!detectedW) {
+                try {
+                    const stored = localStorage.getItem('detectedWeather');
+                    if (stored) detectedW = JSON.parse(stored);
+                } catch (e) { console.error(e); }
+            }
+
+            if (detectedW) {
+                console.log("Auto-rellenando diagnóstico con:", detectedW);
+                const w = detectedW;
+                // Asumimos Min = actual, Max = actual + 2 (estimado simple si no hay forecast)
+                const tempVal = parseFloat(w.temp.replace('°C', '')) || 0;
+                if (manualDiagMinTempInput) manualDiagMinTempInput.value = tempVal;
+                if (manualDiagMaxTempInput) manualDiagMaxTempInput.value = tempVal + 2;
+
+                if (manualDiagHumidityInput) manualDiagHumidityInput.value = parseFloat(w.humidity.replace('%', '')) || '';
+                if (manualDiagPrecipitationInput) manualDiagPrecipitationInput.value = parseFloat(w.precipitation.replace('mm', '')) || 0;
+                if (manualDiagWindInput) manualDiagWindInput.value = w.wind;
+            }
+
             // Escuchadores de eventos para las entradas de clima manual para actualizar el riego
             if (manualDiagHumidityInput) manualDiagHumidityInput.addEventListener('input', updateIrrigationManualDiagnosis);
             if (manualDiagPrecipitationInput) manualDiagPrecipitationInput.addEventListener('input', updateIrrigationManualDiagnosis);
@@ -2204,6 +2310,26 @@
                 Por favor, genera un análisis conciso y accionable sobre los posibles riesgos fitosanitarios para el olivo en estas condiciones, basándote en la descripción de la finca y los datos climáticos. Identifica 1-2 plagas o enfermedades con mayor riesgo y sugiere acciones preventivas o correctivas específicas, priorizando el uso de los bio-insumos/productos regenerativos que el agricultor ha indicado como disponibles.`;
 
                 await getGeminiResponse(aiPrompt, manualDiagExpertContent, manualDiagLoading, manualDiagExpertResponseContainer, generateManualDiagnosisBtn);
+
+                // GUARDAR DIAGNÓSTICO EN FIREBASE
+                if (window.currentFarmId && window.userId) {
+                    try {
+                        const diagnosisData = {
+                            date: new Date().toISOString(),
+                            climateDate: date,
+                            climateData: climateData,
+                            analysis: manualDiagExpertContent.textContent,
+                            farmName: aiContext.farmName,
+                            location: aiContext.farmLocation
+                        };
+
+                        const diagnosesCol = collection(window.db, `artifacts/${window.__app_id}/users/${window.userId}/farms/${window.currentFarmId}/diagnoses`);
+                        await addDoc(diagnosesCol, diagnosisData);
+                        console.log("✅ Diagnóstico guardado en Firebase");
+                    } catch (saveError) {
+                        console.error("Error guardando diagnóstico:", saveError);
+                    }
+                }
             });
         }
 
@@ -2253,9 +2379,15 @@
                         <h4 class="font-bold text-[#385038]">Finca: <span id="header-farm-name" class="text-black">Cargando...</span></h4>
                         <p class="text-sm text-gray-600">Ubicación GPS: <span id="header-gps">--</span></p>
                     </div>
-                    <button id="btn-update-gps-weather" class="bg-[#4A6C4B] text-white font-bold py-2 px-4 rounded hover:bg-[#385038] transition-colors shadow-sm">
-                        📍 Actualizar Aquí (GPS + Clima)
-                    </button>
+                </div>
+                    <div class="flex flex-col items-end">
+                        <button id="btn-update-gps-weather" class="bg-[#4A6C4B] text-white font-bold py-2 px-4 rounded hover:bg-[#385038] transition-colors shadow-sm">
+                            📍 Actualizar Aquí (GPS + Clima)
+                        </button>
+                         <button id="btn-simulate-location" class="mt-2 text-xs text-gray-500 underline hover:text-green-700 cursor-pointer">
+                            🔄 Simular Ubicación (Bogotá)
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid md:grid-cols-2 gap-6 mb-6">
@@ -2396,8 +2528,70 @@
                     expertContent.innerHTML = `<span class="text-red-600 font-bold">❌ Error GPS: ${errorMsg}</span>`;
                     alert("⚠️ IMPORTANTE: Para que funcione el GPS, debes permitir el acceso a la ubicación en tu navegador. Si estás en archivo local (file://), algunos navegadores bloquean esto.");
                 });
-
             });
+
+
+
+            // --- BOTÓN DE RESPALDO: Listener Simulación ---
+            const btnSimulate = document.getElementById('btn-simulate-location');
+            if (btnSimulate) {
+                btnSimulate.addEventListener('click', async () => {
+                    expertContent.innerHTML = '🧪 Iniciando MODO SIMULACIÓN (Bogotá)...';
+                    const lat = 4.7110;
+                    const lon = -74.0721;
+                    const gpsString = `${lat}, ${lon} (Simulado)`;
+
+                    headerGps.textContent = gpsString;
+                    expertContent.innerHTML = '☁️ 2. Consultando Clima Real (Open-Meteo)...';
+
+                    // 1. Clima
+                    const weather = await fetchOpenMeteoWeather(lat, lon);
+                    if (!weather) return;
+
+                    // Render Clima
+                    displayDate.textContent = weather.date;
+                    displayTemp.textContent = weather.temp;
+                    displayHum.textContent = weather.humidity;
+                    displayPrecip.textContent = weather.precipitation;
+                    displayWind.textContent = weather.wind;
+                    displayIrrigation.textContent = weather.needsIrrigation;
+
+                    // 2. Probabilidad Enfermedades (Recalcular con datos reales)
+                    updateDiseaseChart(weather);
+
+                    // 3. Prompt Gemini (Experto)
+                    expertContent.innerHTML = '🤖 3. Analizando Riesgos con Gemini...';
+
+                    window.currentVisitData = {
+                        date: new Date().toISOString(),
+                        farmId: window.currentFarmId || 'unknown',
+                        gps: gpsString,
+                        weather: weather,
+                        analysis: null
+                    };
+
+                    const aiContext = getAIContextData();
+                    const prompt = `Actúa como un experto fitosanitario.
+                        Ubicación Simulada: ${gpsString}
+                        Datos Climáticos (Simulados - Open-Meteo):
+                        - Temp: ${weather.temp}
+                        - Humedad: ${weather.humidity}
+                        - Lluvia: ${weather.precipitation}
+                        - Viento: ${weather.wind}
+                        
+                        Contexto Finca: ${aiContext.farmDescription}
+                        Plagas clave: ${aiContext.selectedPestNames}
+                        
+                        Genera un reporte conciso de riesgos actuales y 3 recomendaciones rápidas.`;
+
+                    await getGeminiResponse(prompt, expertContent, { classList: { remove: () => { }, add: () => { } } }, { classList: { remove: () => { } } }, null);
+
+                    // Habilitar guardar
+                    saveBtn.disabled = false;
+                    saveBtn.classList.remove('opacity-50');
+                });
+            }
+
 
             // --- Guardar Visita ---
             saveBtn.addEventListener('click', async () => {
