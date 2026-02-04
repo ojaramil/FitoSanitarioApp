@@ -344,9 +344,9 @@
 
     <script type="module">
         // Importa las funciones de Firebase necesarias
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, query, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         window.firebaseApp = null;
         window.db = null;
@@ -1001,6 +1001,8 @@
             return relevanceA - relevanceB;
         });
 
+        // (Importaciones movidas al inicio del script)
+
         // Referencia al contenedor de la navegación y al área de contenido
         const navContainer = document.getElementById('nav-container');
         const contentDisplay = document.getElementById('content-display');
@@ -1044,7 +1046,18 @@
 
         // Inicializar Firebase cuando el script se cargue
         document.addEventListener('DOMContentLoaded', async () => {
+            // Función de LOG VISUAL para depuración
+            const logStatus = (msg, isError = false) => {
+                console.log(msg);
+                const indicator = document.getElementById('auth-loading-indicator');
+                if (indicator) {
+                    indicator.textContent = msg;
+                    if (isError) indicator.style.color = 'red';
+                }
+            };
+
             try {
+                logStatus("🚀 Iniciando sistema...");
                 // Configuración manual de Firebase proporcionada por el usuario
                 window.__app_id = 'fitosanitarioapp'; // Usamos el projectID como identificador de app
 
@@ -1057,6 +1070,7 @@
                     appId: "1:807289868100:web:eec84bf317be91c3619111"
                 };
 
+                logStatus("🔥 Conectando a Firebase...");
                 window.firebaseApp = initializeApp(firebaseConfig);
                 window.db = getFirestore(window.firebaseApp);
                 window.auth = getAuth(window.firebaseApp);
@@ -1064,16 +1078,17 @@
                 onAuthStateChanged(window.auth, async (user) => {
                     if (user) {
                         window.userId = user.uid;
-                        console.log("Firebase autenticado. ID de Usuario:", user.uid);
+                        logStatus("✅ Usuario autenticado: " + user.uid.substring(0, 5) + "...");
                     } else {
-                        // Iniciar sesión de forma anónima si no se encuentra un usuario o el token personalizado no es válido/proporcionado
-                        // Iniciar sesión de forma anónima si no hay usuario activo
+                        // Iniciar sesión de forma anónima si no se encuentra un usuario 
                         try {
+                            logStatus("👤 Iniciando anónimo...");
                             await signInAnonymously(window.auth);
                             window.userId = window.auth.currentUser.uid;
-                            console.log("Sesion iniciada de forma anonima. ID de Usuario:", window.userId);
+                            logStatus("✅ Autenticado anónimo: " + window.userId.substring(0, 5) + "...");
                         } catch (error) {
                             console.error("Error en autenticación anónima:", error);
+                            logStatus("❌ Error Auth: " + error.message, true);
                         }
                     }
                     window.isAuthReady = true;
@@ -1093,6 +1108,7 @@
                 });
             } catch (e) {
                 console.error("Fallo al inicializar Firebase:", e);
+                logStatus("❌ Fallo Crítico: " + e.message, true);
                 window.isAuthReady = true; // Marcar como listo incluso si falla, para evitar bloqueos
                 document.dispatchEvent(new CustomEvent('firebaseAuthReady'));
             }
@@ -2334,27 +2350,53 @@
                     displayWind.textContent = weather.wind;
                     displayIrrigation.textContent = weather.needsIrrigation;
 
-                    // 2. Gráfico
+                    // 2. Probabilidad Enfermedades (Recalcular con datos reales)
                     updateDiseaseChart(weather);
 
-                    // 3. IA Generación
-                    expertContent.innerHTML = '🤖 3. Analizando Riesgos con Gemini...';
+                    // 3. Prompt Gemini (Experto)
+                    expertContent.innerHTML = '🧠 3. Analizando con IA (Gemini)...';
 
-                    // Guardar en variable temporal para poder guardar después
+                    const aiContext = getAIContextData();
+                    const prompt = `Actúa como un experto fitosanitario.
+                    Ubicación Real: ${gpsString}
+                    Datos Climáticos Reales (Open-Meteo):
+                    - Temp: ${weather.temp}
+                    - Humedad: ${weather.humidity}
+                    - Lluvia: ${weather.precipitation}
+                    - Viento: ${weather.wind}
+                    
+                    Contexto Finca: ${aiContext.farmDescription}
+                    Plagas clave: ${aiContext.selectedPestNames}
+                    
+                    Genera un reporte conciso de riesgos actuales y 3 recomendaciones rápidas.`;
+
+                    await getGeminiResponse(prompt, expertContent, { classList: { remove: () => { }, add: () => { } } }, { classList: { remove: () => { } } }, null);
+
+                    // Datos listos para guardar
                     window.currentVisitData = {
                         date: new Date().toISOString(),
+                        farmId: window.currentFarmId || 'unknown',
                         gps: gpsString,
                         weather: weather,
-                        analysis: null // Se llenará tras respuesta IA
+                        analysis: expertContent.innerText
                     };
 
-                    await generateGeminiAnalysis(weather, expertContent, saveBtn);
+                    // Habilitar guardar
+                    saveBtn.disabled = false;
+                    saveBtn.classList.remove('opacity-50');
 
-                }, (err) => {
-                    console.error(err);
-                    alert("Error GPS: " + err.message + ". Asegúrate de dar permisos.");
-                    expertContent.textContent = 'Error de GPS. No se puede proceder.';
+                }, (error) => {
+                    console.error("Error GPS:", error);
+                    let errorMsg = "No se pudo obtener la ubicación.";
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED: errorMsg = "Usuario denegó permiso de GPS."; break;
+                        case error.POSITION_UNAVAILABLE: errorMsg = "Ubicación no disponible."; break;
+                        case error.TIMEOUT: errorMsg = "Se agotó el tiempo para obtener GPS."; break;
+                    }
+                    expertContent.innerHTML = `<span class="text-red-600 font-bold">❌ Error GPS: ${errorMsg}</span>`;
+                    alert("⚠️ IMPORTANTE: Para que funcione el GPS, debes permitir el acceso a la ubicación en tu navegador. Si estás en archivo local (file://), algunos navegadores bloquean esto.");
                 });
+
             });
 
             // --- Guardar Visita ---
