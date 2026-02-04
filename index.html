@@ -1546,7 +1546,7 @@
                 throw new Error("API Key no encontrada. Verifica config.js");
             }
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
 
@@ -2055,7 +2055,7 @@
             if (manualDiagExpertContent) manualDiagExpertContent.textContent = 'Obteniendo datos climáticos de Google Weather...';
 
             const apiKey = ""; // API key is injected by the Canvas environment
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
 
             const prompt = "clima actual Villa de Leyva Colombia, temperatura, humedad, precipitacion, viento"; // Specific prompt for Google Search
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
@@ -3885,69 +3885,69 @@
 
                 await getGeminiResponse(prompt, dataExpertContent, dataAnalysisLoading, dataExpertResponseContainer, analyzeFarmDataBtn);
             });
-        }
 
-        // --- CÓDIGO DE DIAGNÓSTICO DE MODELOS ---
-        const btnDiagnoseModels = document.getElementById('btn-diagnose-models');
-        const modelsResult = document.getElementById('models-diagnosis-result');
 
-        if (btnDiagnoseModels) {
-            btnDiagnoseModels.addEventListener('click', async () => {
-                modelsResult.classList.remove('hidden');
-                modelsResult.textContent = "🔍 Consultando modelos... Espere...";
-                const apiKey = window.APP_CONFIG?.GEMINI_API_KEY;
+            // --- CÓDIGO DE DIAGNÓSTICO DE MODELOS ---
+            const btnDiagnoseModels = document.getElementById('btn-diagnose-models');
+            const modelsResult = document.getElementById('models-diagnosis-result');
 
-                if (!apiKey) {
-                    modelsResult.textContent = "❌ ERROR: No hay API Key configurada.";
-                    return;
-                }
+            if (btnDiagnoseModels) {
+                btnDiagnoseModels.addEventListener('click', async () => {
+                    modelsResult.classList.remove('hidden');
+                    modelsResult.textContent = "🔍 Consultando modelos... Espere...";
+                    const apiKey = window.APP_CONFIG?.GEMINI_API_KEY;
 
-                try {
-                    // Intentar v1beta
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-                    const response = await fetch(url);
-                    const data = await response.json();
-
-                    if (data.models) {
-                        const modelNames = data.models.map(m => m.name).join("\n");
-                        modelsResult.textContent = "✅ MODELOS DISPONIBLES (v1beta):\n\n" + modelNames;
-                    } else if (data.error) {
-                        modelsResult.textContent = "❌ ERROR GOOGLE:\n" + JSON.stringify(data.error, null, 2);
-                    } else {
-                        modelsResult.textContent = "⚠️ RESPUESTA INESPERADA:\n" + JSON.stringify(data, null, 2);
+                    if (!apiKey) {
+                        modelsResult.textContent = "❌ ERROR: No hay API Key configurada.";
+                        return;
                     }
-                } catch (e) {
-                    modelsResult.textContent = "❌ ERROR DE RED:\n" + e.message;
-                }
+
+                    try {
+                        // Intentar v1beta
+                        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+                        const response = await fetch(url);
+                        const data = await response.json();
+
+                        if (data.models) {
+                            const modelNames = data.models.map(m => m.name).join("\n");
+                            modelsResult.textContent = "✅ MODELOS DISPONIBLES (v1beta):\n\n" + modelNames;
+                        } else if (data.error) {
+                            modelsResult.textContent = "❌ ERROR GOOGLE:\n" + JSON.stringify(data.error, null, 2);
+                        } else {
+                            modelsResult.textContent = "⚠️ RESPUESTA INESPERADA:\n" + JSON.stringify(data, null, 2);
+                        }
+                    } catch (e) {
+                        modelsResult.textContent = "❌ ERROR DE RED:\n" + e.message;
+                    }
+                });
+            }
+
+
+            // --- Configuración de Navegación ---
+            const navItems = [
+                { id: 'farm-general-data', label: 'Datos Generales Finca' },
+                { id: 'initial-diagnosis', label: 'Diagnóstico Inicial' },
+                { id: 'olive-diseases', label: 'Enfermedades del Olivo' },
+                { id: 'bio-inputs-products', label: 'Bio-insumos y Productos' },
+                { id: 'today-data', label: 'Datos Hoy y Historial' },
+                { id: 'villa-de-leyva-weather', label: 'Clima Villa de Leyva' },
+                { id: 'regenerative-approach', label: 'Enfoque Regenerativo' },
+                { id: 'diagnosis-expert', label: 'Diagnóstico/Experto' },
+                { id: 'data', label: 'Datos' }, // Nueva pestaña 'Data'
+                { id: 'clients-weather', label: 'Clientes' }
+            ];
+
+            navItems.forEach(item => {
+                const button = document.createElement('button');
+                button.className = 'nav-button px-4 py-2 mx-1 bg-[#A3B9A3] text-white rounded-md shadow-sm hover:bg-[#81C784] focus:outline-none focus:ring-2 focus:ring-[#4A6C4B] focus:ring-opacity-50';
+                button.textContent = item.label;
+                button.setAttribute('data-section', item.id);
+                button.addEventListener('click', () => showSectionContent(item.id));
+                navContainer.appendChild(button);
             });
-        }
 
-
-        // --- Configuración de Navegación ---
-        const navItems = [
-            { id: 'farm-general-data', label: 'Datos Generales Finca' },
-            { id: 'initial-diagnosis', label: 'Diagnóstico Inicial' },
-            { id: 'olive-diseases', label: 'Enfermedades del Olivo' },
-            { id: 'bio-inputs-products', label: 'Bio-insumos y Productos' },
-            { id: 'today-data', label: 'Datos Hoy y Historial' },
-            { id: 'villa-de-leyva-weather', label: 'Clima Villa de Leyva' },
-            { id: 'regenerative-approach', label: 'Enfoque Regenerativo' },
-            { id: 'diagnosis-expert', label: 'Diagnóstico/Experto' },
-            { id: 'data', label: 'Datos' }, // Nueva pestaña 'Data'
-            { id: 'clients-weather', label: 'Clientes' }
-        ];
-
-        navItems.forEach(item => {
-            const button = document.createElement('button');
-            button.className = 'nav-button px-4 py-2 mx-1 bg-[#A3B9A3] text-white rounded-md shadow-sm hover:bg-[#81C784] focus:outline-none focus:ring-2 focus:ring-[#4A6C4B] focus:ring-opacity-50';
-            button.textContent = item.label;
-            button.setAttribute('data-section', item.id);
-            button.addEventListener('click', () => showSectionContent(item.id));
-            navContainer.appendChild(button);
-        });
-
-        // Inicializar con el contenido predeterminado
-        showSectionContent('farm-general-data'); // Iniciar en la sección de datos generales de la finca
+            // Inicializar con el contenido predeterminado
+            showSectionContent('farm-general-data'); // Iniciar en la sección de datos generales de la finca
     </script>
 </body>
 
