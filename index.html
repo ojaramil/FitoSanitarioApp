@@ -1546,7 +1546,7 @@
                 throw new Error("API Key no encontrada. Verifica config.js");
             }
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
 
@@ -2055,7 +2055,7 @@
             if (manualDiagExpertContent) manualDiagExpertContent.textContent = 'Obteniendo datos climáticos de Google Weather...';
 
             const apiKey = ""; // API key is injected by the Canvas environment
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
 
             const prompt = "clima actual Villa de Leyva Colombia, temperatura, humedad, precipitacion, viento"; // Specific prompt for Google Search
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
