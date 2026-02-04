@@ -2217,6 +2217,12 @@
                     </div>
                 </div>
 
+                <!-- Botón de diagnóstico de modelos (TEMPORAL) -->
+                <button type="button" id="btn-diagnose-models" class="mb-4 w-full bg-gray-500 text-white px-3 py-2 rounded text-sm hover:bg-gray-600">
+                    🛠️ Diagnosticar Modelos Disponibles
+                </button>
+                <div id="models-diagnosis-result" class="mb-4 p-2 bg-gray-100 text-xs font-mono hidden whitespace-pre-wrap text-black border border-gray-300"></div>
+
                 <button id="generate-manual-diagnosis-btn" class="bg-[#4A6C4B] hover:bg-[#385038] text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-300 flex items-center justify-center">
                     Generar Análisis Experto
                     <span id="manual-diag-loading" class="spinner ml-2 hidden"></span>
@@ -3878,6 +3884,41 @@
                 4. Haz referencia a cómo las prácticas regenerativas seleccionadas (${aiContext.selectedPracticesContext}) y los bio-insumos/productos (${aiContext.selectedProductsContext}) podrían ser relevantes para estas áreas.`;
 
                 await getGeminiResponse(prompt, dataExpertContent, dataAnalysisLoading, dataExpertResponseContainer, analyzeFarmDataBtn);
+            });
+        }
+
+        // --- CÓDIGO DE DIAGNÓSTICO DE MODELOS ---
+        const btnDiagnoseModels = document.getElementById('btn-diagnose-models');
+        const modelsResult = document.getElementById('models-diagnosis-result');
+
+        if (btnDiagnoseModels) {
+            btnDiagnoseModels.addEventListener('click', async () => {
+                modelsResult.classList.remove('hidden');
+                modelsResult.textContent = "🔍 Consultando modelos... Espere...";
+                const apiKey = window.APP_CONFIG?.GEMINI_API_KEY;
+
+                if (!apiKey) {
+                    modelsResult.textContent = "❌ ERROR: No hay API Key configurada.";
+                    return;
+                }
+
+                try {
+                    // Intentar v1beta
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+
+                    if (data.models) {
+                        const modelNames = data.models.map(m => m.name).join("\n");
+                        modelsResult.textContent = "✅ MODELOS DISPONIBLES (v1beta):\n\n" + modelNames;
+                    } else if (data.error) {
+                        modelsResult.textContent = "❌ ERROR GOOGLE:\n" + JSON.stringify(data.error, null, 2);
+                    } else {
+                        modelsResult.textContent = "⚠️ RESPUESTA INESPERADA:\n" + JSON.stringify(data, null, 2);
+                    }
+                } catch (e) {
+                    modelsResult.textContent = "❌ ERROR DE RED:\n" + e.message;
+                }
             });
         }
 
