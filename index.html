@@ -3938,18 +3938,27 @@
             { id: 'clients-weather', label: 'Clientes' }
         ];
 
-        navItems.forEach(item => {
-            const button = document.createElement('button');
-            button.className = 'nav-button px-4 py-2 mx-1 bg-[#A3B9A3] text-white rounded-md shadow-sm hover:bg-[#81C784] focus:outline-none focus:ring-2 focus:ring-[#4A6C4B] focus:ring-opacity-50';
-            button.textContent = item.label;
-            button.setAttribute('data-section', item.id);
-            button.addEventListener('click', () => showSectionContent(item.id));
-            navContainer.appendChild(button);
-        });
+        // Asegurar referencia al contenedor
+        const navContainerLocal = document.getElementById('nav-container');
+
+        if (navContainerLocal) {
+            // Limpiar pestañas existentes para evitar duplicados
+            navContainerLocal.innerHTML = '';
+
+            navItems.forEach(item => {
+                const button = document.createElement('button');
+                button.className = 'nav-button px-4 py-2 mx-1 bg-[#A3B9A3] text-white rounded-md shadow-sm hover:bg-[#81C784] focus:outline-none focus:ring-2 focus:ring-[#4A6C4B] focus:ring-opacity-50';
+                button.textContent = item.label;
+                button.setAttribute('data-section', item.id);
+                button.addEventListener('click', () => showSectionContent(item.id));
+                navContainerLocal.appendChild(button);
+            });
+        } else {
+            console.error("CRITICAL ERROR: nav-container not found in DOM");
+        }
 
         // Inicializar con el contenido predeterminado
-        showSectionContent('farm-general-data'); // Iniciar en la sección de datos generales de la finca
-        showSectionContent('farm-general-data'); // Iniciar en la sección de datos generales de la finca
+        showSectionContent('farm-general-data'); 
     });
     </script>
 </body>
