@@ -1539,7 +1539,13 @@
             contentElement.textContent = 'Generando análisis experto...';
             responseContainerElement.classList.remove('hidden');
 
-            const apiKey = "AIzaSyBwNVjdlVku_1OHstcMhGULXoFBxigwFIs";
+            // Usar API key desde configuración
+            const apiKey = window.APP_CONFIG?.GEMINI_API_KEY;
+
+            if (!apiKey) {
+                throw new Error("API Key no encontrada. Verifica config.js");
+            }
+
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
