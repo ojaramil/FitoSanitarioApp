@@ -1,0 +1,4 @@
+# API Keys y configuración sensible
+config.js
+.env
+.env.local
