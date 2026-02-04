@@ -1212,8 +1212,8 @@
                         el.className = 'farm-item';
                         el.innerHTML = `
                             <div>
-                                <h4 class="font-bold text-[#385038]">${farm.farmName}</h4>
-                                <p class="text-sm text-gray-600">${farm.municipio || 'Sin ubicación'}</p>
+                                <h4 class="font-bold text-[#385038]">🌾 ${farm.farmName}</h4>
+                                <p class="text-sm text-gray-600">📍 ${farm.municipio || 'Sin ubicación'}</p>
                             </div>
                             <span class="text-2xl">➡️</span>
                         `;
@@ -1256,8 +1256,8 @@
             // Notificar que ya estamos listos en una finca
             console.log(`Finca seleccionada: ${farmData.farmName} (${farmId})`);
 
-            // REFRESCAR DASHBOARD
-            renderTodayData();
+            // NAVEGAR A DATOS GENERALES CON DATOS CARGADOS
+            await renderFarmGeneralData();
         }
 
         async function loadSelectedFarmProfile() {
@@ -1270,6 +1270,29 @@
                 if (docSnap.exists()) {
                     window.farmProfileData = docSnap.data();
                     console.log("Datos detallados de finca cargados:", window.farmProfileData);
+
+                    // AUTO-ACTUALIZAR CLIMA SI HAY GPS GUARDADO
+                    if (window.farmProfileData.gpsCoordinates) {
+                        try {
+                            const coords = window.farmProfileData.gpsCoordinates.trim();
+                            const [latStr, lonStr] = coords.split(',').map(s => s.trim());
+                            const lat = parseFloat(latStr);
+                            const lon = parseFloat(lonStr);
+
+                            if (!isNaN(lat) && !isNaN(lon)) {
+                                console.log("🌤️ Auto-detectando clima para GPS guardado:", lat, lon);
+                                const weather = await fetchOpenMeteoWeather(lat, lon);
+
+                                if (weather) {
+                                    window.detectedWeather = weather;
+                                    localStorage.setItem('detectedWeather', JSON.stringify(weather));
+                                    console.log("✅ Clima actualizado automáticamente");
+                                }
+                            }
+                        } catch (weatherError) {
+                            console.error("Error auto-cargando clima:", weatherError);
+                        }
+                    }
                 } else {
                     console.log("Perfil detallado no existe aún, usando datos básicos.");
                 }
