@@ -1718,7 +1718,7 @@
                         <label for="farm-gps-input" class="block text-gray-700 font-semibold mb-2">Coordenadas GPS (Latitud, Longitud):</label>
                         <div class="flex gap-2">
                             <input type="text" id="farm-gps-input" class="p-2 border border-gray-300 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-[#4A6C4B]" placeholder="Ej. 5.6383, -73.5350">
-                            <button id="btn-detect-farm-location" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors whitespace-nowrap">
+                            <button type="button" id="btn-detect-farm-location" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors whitespace-nowrap">
                                 📍 Detectar y Clima
                             </button>
                         </div>
@@ -1914,8 +1914,9 @@
                     contactEmail: contactEmailInput.value.trim()
                 };
 
-                if (!farmData.farmName || !farmData.visitDate || !farmData.departamento || !farmData.municipio || !farmData.oliveVariety || isNaN(farmData.numOlives) || isNaN(farmData.farmExtension) || !farmData.oliveProduction) {
-                    farmDataMessage.textContent = 'Por favor, completa todos los campos obligatorios de la finca.';
+                // Validación más flexible - solo campos esenciales
+                if (!farmData.farmName || !farmData.municipio) {
+                    farmDataMessage.textContent = 'Por favor, completa al menos el nombre de la finca y el municipio.';
                     farmDataMessage.style.color = 'orange';
                     farmDataLoading.classList.add('hidden');
                     saveFarmDataBtn.disabled = false;
@@ -1961,7 +1962,14 @@
                     userIdDisplayFarm.style.color = 'red';
                 }
 
-                const docRef = doc(window.db, `artifacts/${window.__app_id}/users/${window.userId}/farm_profile`, 'farmDoc');
+                // USAR LA FINCA ACTUALMENTE SELECCIONADA
+                if (!window.currentFarmId) {
+                    farmDataMessage.textContent = 'Por favor, selecciona una finca primero.';
+                    farmDataMessage.style.color = 'orange';
+                    return;
+                }
+
+                const docRef = doc(window.db, `artifacts/${window.__app_id}/users/${window.userId}/farms/${window.currentFarmId}/profile`, 'farmDoc');
                 farmDataLoading.classList.remove('hidden');
                 farmDataMessage.textContent = 'Cargando datos de la finca...';
                 farmDataMessage.style.color = 'gray';
@@ -1986,13 +1994,13 @@
                         contactPersonInput.value = data.contactPerson || '';
                         farmManagerInput.value = data.farmManager || '';
                         contactCellularInput.value = data.contactCellular || '';
-                        managerCellularInput.value = data.managerCellular || ''; // Cargar el celular del encargado
+                        managerCellularInput.value = data.managerCellular || '';
                         contactEmailInput.value = data.contactEmail || '';
-                        updateWordCounter(); // Actualizar contador después de cargar datos
+                        updateWordCounter();
                         farmDataMessage.textContent = 'Datos de la finca cargados exitosamente.';
                         farmDataMessage.style.color = 'green';
                     } else {
-                        farmDataMessage.textContent = 'No hay datos de la finca guardados. Por favor, ingresa los datos de tu finca.';
+                        farmDataMessage.textContent = 'No hay datos guardados para esta finca. Por favor, ingresa los datos.';
                         farmDataMessage.style.color = 'orange';
                     }
                 } catch (e) {
