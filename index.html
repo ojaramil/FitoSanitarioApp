@@ -1535,8 +1535,8 @@
             contentElement.textContent = 'Generando análisis experto...';
             responseContainerElement.classList.remove('hidden');
 
-            const apiKey = "AIzaSyBwNVjdlVku_1OHstcMhGULXoFBxigwFIs"; // La clave API es inyectada por el entorno de Canvas
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+            const apiKey = "AIzaSyBwNVjdlVku_1OHstcMhGULXoFBxigwFIs";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
 
