@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plan Fitosanitario Interactivo del Olivo</title>
 
-    <!-- Cargar configuración -->
-    <script src="config.js?v=3"></script>
+    <!-- Cargar configuración (Eliminado por seguridad, ahora usamos backend) -->
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1539,14 +1538,8 @@
             contentElement.textContent = 'Generando análisis experto...';
             responseContainerElement.classList.remove('hidden');
 
-            // Usar API key desde configuración
-            const apiKey = window.APP_CONFIG?.GEMINI_API_KEY;
-
-            if (!apiKey) {
-                throw new Error("API Key no encontrada. Verifica config.js");
-            }
-
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
+            // Usando la función de Netlify para seguridad
+            const apiUrl = `/.netlify/functions/gemini`;
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
 
@@ -1554,7 +1547,7 @@
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ action: 'generateContent', payload: payload })
                 });
 
                 if (!response.ok) {
@@ -3895,17 +3888,14 @@
                 btnDiagnoseModels.addEventListener('click', async () => {
                     modelsResult.classList.remove('hidden');
                     modelsResult.textContent = "🔍 Consultando modelos... Espere...";
-                    const apiKey = window.APP_CONFIG?.GEMINI_API_KEY;
-
-                    if (!apiKey) {
-                        modelsResult.textContent = "❌ ERROR: No hay API Key configurada.";
-                        return;
-                    }
-
+                    // Ya no usamos API key directa, vamos a nuestra función
                     try {
-                        // Intentar v1beta
-                        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-                        const response = await fetch(url);
+                        const url = `/.netlify/functions/gemini`;
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'getModels' })
+                        });
                         const data = await response.json();
 
                         if (data.models) {
