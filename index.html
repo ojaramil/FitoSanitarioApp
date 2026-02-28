@@ -14,6 +14,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=Lato:wght@400;700&display=swap"
         rel="stylesheet">
+
+    <!-- Librerías para Parsear Markdown y Exportar PDF -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <style>
         body {
             font-family: 'Lato', sans-serif;
@@ -1560,7 +1565,16 @@
                 if (result.candidates && result.candidates.length > 0 &&
                     result.candidates[0].content && result.candidates[0].content.parts &&
                     result.candidates[0].content.parts.length > 0) {
-                    contentElement.textContent = result.candidates[0].content.parts[0].text;
+
+                    const responseText = result.candidates[0].content.parts[0].text;
+
+                    // Si tenemos disponible marked.js, formateamos el texto a HTML (para negritas, listas, etc)
+                    if (typeof marked !== 'undefined') {
+                        contentElement.innerHTML = marked.parse(responseText);
+                    } else {
+                        contentElement.textContent = responseText;
+                    }
+
                 } else {
                     contentElement.textContent = 'Lo siento, no pude obtener una respuesta en este momento (respuesta inesperada).';
                     console.error("Estructura de respuesta inesperada de la API de Gemini:", result);
@@ -3870,15 +3884,65 @@
                 Descripción y Actividad de la Finca:
                 ${aiContext.farmDescription}
 
-                Basándote en esta información, por favor, genera un análisis de alto nivel que incluya:
-                1. Un resumen del estado actual de la finca.
-                2. Posibles áreas de mejora o desafíos basados en los datos proporcionados.
-                3. Preguntas clave que el agricultor debería considerar o investigar más a fondo para optimizar su producción y manejo fitosanitario.
-                4. Haz referencia a cómo las prácticas regenerativas seleccionadas (${aiContext.selectedPracticesContext}) y los bio-insumos/productos (${aiContext.selectedProductsContext}) podrían ser relevantes para estas áreas.`;
+                Basándote en esta información, por favor actúa como un Ingeniero Agrónomo y redacta un INFORME TÉCNICO Fitosanitario profesional y estructurado (como si fuera un correo formal para el agricultor o un reporte para descargar). 
+                
+                Usa el formato Markdown (con títulos jerárquicos, negritas para enfatizar datos, viñetas y espacios). El informe debe incluir explícitamente y en este orden:
+                
+                # REPORTE TÉCNICO DE ESTADO FITOSANITARIO
+                - **Fecha de Análisis:** (El día de hoy)
+                - **Ubicación de Referencia:** ${aiContext.farmLocation}
+                
+                ## 1. Resumen Ejecutivo del Estado del Cultivo
+                (Un párrafo evaluando el estado general según los datos).
+                
+                ## 2. Puntos Críticos y Hallazgos Relevantes
+                (Analiza los desafíos o fortalezas basados en la extensión, número de olivos y producción).
+                
+                ## 3. Matriz de Recomendaciones Estratégicas
+                (Sugiere preguntas clave o acciones específicas que el agricultor debe realizar. Integra aquí cómo las prácticas regenerativas seleccionadas **${aiContext.selectedPracticesContext}** y los productos **${aiContext.selectedProductsContext}** pueden ser utilizados de manera óptima para optimizar su producción).
+                
+                ## 4. Próximos Pasos 
+                (Una conclusión motivadora y asertiva indicando qué hacer mañana en campo).
+                `;
 
                 await getGeminiResponse(prompt, dataExpertContent, dataAnalysisLoading, dataExpertResponseContainer, analyzeFarmDataBtn);
             });
 
+            // Botón para Exportar a PDF el análisis de la pestaña de Datos
+            const exportPdfBtn = document.createElement('button');
+            exportPdfBtn.id = 'export-pdf-report-btn';
+            exportPdfBtn.className = 'mt-4 w-full bg-[#385038] text-white px-3 py-2 rounded text-sm hover:bg-[#2c3f2c] focus:outline-none transition-colors border border-green-700 font-bold';
+            exportPdfBtn.innerHTML = '⬇️ Descargar Informe como PDF';
+
+            // Lo insertamos dentro del contenedor de respuestas
+            if (dataExpertResponseContainer) {
+                dataExpertResponseContainer.appendChild(exportPdfBtn);
+
+                exportPdfBtn.addEventListener('click', () => {
+                    const element = dataExpertContent; // El div que tiene el html renderizado
+                    if (element.innerText.trim() === '') return alert('No hay informe generado aún.');
+
+                    const opt = {
+                        margin: 10,
+                        filename: 'Informe_Fitosanitario_Olivo.pdf',
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2 },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    };
+
+                    // Aplicar un estilo temporal rápido para que el PDF se vea bien
+                    element.style.padding = '20px';
+                    element.style.color = '#000';
+                    element.style.fontSize = '12px';
+
+                    html2pdf().from(element).set(opt).save().then(() => {
+                        // Restaurar estilos
+                        element.style.padding = '0';
+                        element.style.fontSize = '';
+                        element.style.color = '';
+                    });
+                });
+            }
 
             // --- CÓDIGO DE DIAGNÓSTICO DE MODELOS ---
             const btnDiagnoseModels = document.getElementById('btn-diagnose-models');
