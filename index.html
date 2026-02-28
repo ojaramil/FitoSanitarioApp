@@ -2230,14 +2230,20 @@
                 </button>
                 <div id="models-diagnosis-result" class="mb-4 p-2 bg-gray-100 text-xs font-mono hidden whitespace-pre-wrap text-black border border-gray-300"></div>
 
-                <button id="generate-manual-diagnosis-btn" class="bg-[#4A6C4B] hover:bg-[#385038] text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-300 flex items-center justify-center">
-                    Generar Análisis Experto
-                    <span id="manual-diag-loading" class="spinner ml-2 hidden"></span>
-                </button>
+                <div class="flex flex-col sm:flex-row gap-4 mt-4">
+                    <button id="generate-manual-diagnosis-btn" class="flex-1 bg-[#4A6C4B] hover:bg-[#385038] text-white font-bold py-3 px-4 rounded-md shadow-md transition-colors duration-300 flex items-center justify-center">
+                        Generar Análisis Experto
+                        <span id="manual-diag-loading" class="spinner ml-2 hidden"></span>
+                    </button>
+
+                    <button id="export-pdf-manual-diag-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-md shadow-md transition-colors duration-300 flex items-center justify-center gap-2 border border-gray-400">
+                        📄 Descargar Diagnóstico PDF
+                    </button>
+                </div>
 
                 <div id="manual-diag-expert-response-container" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-gray-700 hidden">
                     <p class="font-semibold text-lg mb-2">Análisis del Experto Fitosanitario (IA):</p>
-                    <div id="manual-diag-expert-content">Esperando datos para análisis...</div>
+                    <div id="manual-diag-expert-content" class="prose max-w-none">Esperando datos para análisis...</div>
                 </div>
             `;
 
@@ -2376,7 +2382,22 @@
                 Considera especialmente las siguientes plagas y enfermedades: ${aiContext.selectedPestNames}.
                 El agricultor tiene disponibles o está considerando usar los siguientes bio-insumos/productos regenerativos: ${aiContext.selectedProductsContext}.
 
-                Por favor, genera un análisis conciso y accionable sobre los posibles riesgos fitosanitarios para el olivo en estas condiciones, basándote en la descripción de la finca y los datos climáticos. Identifica 1-2 plagas o enfermedades con mayor riesgo y sugiere acciones preventivas o correctivas específicas, priorizando el uso de los bio-insumos/productos regenerativos que el agricultor ha indicado como disponibles.`;
+                Por favor, genera un análisis conciso y accionable, redactado con un formato profesional en Markdown (usa títulos principales, subtítulos, puntos en viñeta y negritas para resaltar palabras clave). 
+                
+                Incluye la siguiente estructura:
+                # DIAGNÓSTICO FITOSANITARIO
+                - **Ubicación:** ${aiContext.farmLocation}
+                - **Fecha de Toma de Datos:** ${date}
+                
+                ## 1. Análisis del Riesgo Climático
+                (Un párrafo breve sobre cómo las condiciones registradas en esa fecha impactan al cultivo).
+                
+                ## 2. Plagas y Enfermedades en Riesgo
+                (Identifica 1 o 2 patógenos muy certeros).
+                
+                ## 3. Plan de Acción Regenerativo
+                (Sugiere acciones preventivas o correctivas específicas, priorizando ESTRICTAMENTE el uso de los bio-insumos/productos que el agricultor tiene disponibles).
+                `;
 
                 await getGeminiResponse(aiPrompt, manualDiagExpertContent, manualDiagLoading, manualDiagExpertResponseContainer, generateManualDiagnosisBtn);
 
@@ -2400,6 +2421,41 @@
                     }
                 }
             });
+
+            // LOGICA PARA EXPORTAR EL PDF DEL RESULTADO DEL MANUAL DIAGNOSIS
+            const exportPdfManualDiagBtn = document.getElementById('export-pdf-manual-diag-btn');
+            if (exportPdfManualDiagBtn) {
+                exportPdfManualDiagBtn.addEventListener('click', () => {
+                    const elementContent = manualDiagExpertContent;
+                    if (!elementContent || elementContent.innerText.trim() === '' || elementContent.innerText.includes('Esperando datos')) {
+                        return alert('Aún no hay un análisis experto generado para descargar.');
+                    }
+
+                    const opt = {
+                        margin: [15, 15, 15, 15],
+                        filename: 'Diagnostico_Fitosanitario_Experto.pdf',
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    };
+
+                    exportPdfManualDiagBtn.innerHTML = '⏳ Generando PDF...';
+                    exportPdfManualDiagBtn.disabled = true;
+
+                    const originalColor = elementContent.style.color;
+                    elementContent.style.color = '#000000';
+
+                    html2pdf().from(elementContent).set(opt).save().then(() => {
+                        elementContent.style.color = originalColor;
+                        exportPdfManualDiagBtn.innerHTML = '📄 Descargar Diagnóstico PDF';
+                        exportPdfManualDiagBtn.disabled = false;
+                    }).catch(err => {
+                        console.error('Error exportando:', err);
+                        exportPdfManualDiagBtn.innerHTML = '📄 Descargar Diagnóstico PDF';
+                        exportPdfManualDiagBtn.disabled = false;
+                    });
+                });
+            }
         }
 
         /**
