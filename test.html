@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Diagnóstico de Modelos Gemini</title>
+    <!-- Cargar configuración -->
+    <script src="config.js?v=999"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        pre {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #4A6C4B;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🛠️ Diagnóstico de Conexión Gemini</h1>
+    <p>Esta página prueba qué modelos están disponibles para tu API Key.</p>
+
+    <div id="status">Verificando configuración...</div>
+    <div id="key-info" style="margin: 10px 0; font-family: monospace;"></div>
+
+    <button onclick="checkModels()">🔍 Consultar Modelos Disponibles</button>
+
+    <h3>Resultados:</h3>
+    <pre id="output">Haz clic en el botón para iniciar...</pre>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const keyInfoDiv = document.getElementById('key-info');
+        const outputPre = document.getElementById('output');
+
+        // Mostrar info de la clave
+        const apiKey = window.APP_CONFIG?.GEMINI_API_KEY;
+        if (apiKey) {
+            statusDiv.innerHTML = "<span class='success'>✅ Configuración cargada correctamente.</span>";
+            keyInfoDiv.textContent = `API Key detectada: ${apiKey.substring(0, 10)}...${apiKey.slice(-5)}`;
+        } else {
+            statusDiv.innerHTML = "<span class='error'>❌ No se encontró API Key en config.js</span>";
+        }
+
+        async function checkModels() {
+            if (!apiKey) {
+                outputPre.textContent = "No se puede probar sin API Key.";
+                return;
+            }
+
+            outputPre.textContent = "Consultando API de Google (v1beta)... espere...";
+
+            try {
+                // Probar endpoint v1beta list models
+                const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (response.ok) {
+                    const models = data.models || [];
+                    let text = "✅ CONEXIÓN EXITOSA\n\nModelos Disponibles:\n-------------------\n";
+
+                    if (models.length === 0) {
+                        text += "⚠️ La lista de modelos está vacía (Extraño).";
+                    } else {
+                        // Filtrar solo los que sirven para 'generateContent'
+                        const chatModels = models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+
+                        text += chatModels.map(m => `• ${m.name} \n  (Versión: ${m.version})`).join("\n\n");
+
+                        text += "\n\n-------------------\nTodos los modelos crudos:\n" + models.map(m => m.name).join(", ");
+                    }
+                    outputPre.textContent = text;
+                    outputPre.style.color = "green";
+                } else {
+                    outputPre.textContent = `❌ ERROR HTTP ${response.status}:\n` + JSON.stringify(data, null, 2);
+                    outputPre.style.color = "red";
+                }
+            } catch (err) {
+                outputPre.textContent = `❌ ERROR DE RED:\n${err.message}\n\nPosible causa: Bloqueo de Referrer o CORS.`;
+                outputPre.style.color = "red";
+            }
+        }
+    </script>
+</body>
+
+</html>

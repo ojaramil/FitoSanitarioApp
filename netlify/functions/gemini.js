@@ -1,3 +1,5 @@
+const fetch = require('node-fetch');
+
 exports.handler = async function (event, context) {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
@@ -5,7 +7,7 @@ exports.handler = async function (event, context) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'La API Key no está configurada en las variables de entorno de Netlify.' }) };
+        return { statusCode: 500, body: JSON.stringify({ error: 'La API Key no está configurada.' }) };
     }
 
     try {
