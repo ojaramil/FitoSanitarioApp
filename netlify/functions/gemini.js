@@ -49,7 +49,7 @@ exports.handler = async function (event, context) {
                         content: userPrompt,
                     }
                 ],
-                model: "llama3-70b-8192", // Modelo gratuito de Groq
+                model: "llama-3.3-70b-versatile", // Modelo actual y rápido de Groq
                 temperature: 0.5,
             });
 
