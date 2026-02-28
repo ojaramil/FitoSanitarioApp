@@ -1,51 +1,84 @@
-const fetch = require('node-fetch');
+const Groq = require("groq-sdk");
 
 exports.handler = async function (event, context) {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'La API Key no está configurada.' }) };
+        return { statusCode: 500, body: JSON.stringify({ error: 'La API Key de GROQ no está configurada en Netlify.' }) };
     }
 
     try {
         const body = JSON.parse(event.body);
         const action = body.action;
 
+        // Inicializamos el cliente de Groq con la llave
+        const groq = new Groq({ apiKey: apiKey });
+
         if (action === 'getModels') {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-            const response = await fetch(url);
-            const data = await response.json();
+            // Groq no tiene un endpoint idéntico de listar modelos para publico general, mockeamos una respuesta exitosa
             return {
                 statusCode: 200,
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    models: [
+                        { name: "Llama 3 8B (Groq Fast)" },
+                        { name: "Llama 3 70B (Groq Expert)" },
+                        { name: "Mixtral 8x7B" }
+                    ]
+                })
             };
         }
 
         if (action === 'generateContent') {
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body.payload)
+            // Extraer el texto del payload que mandaba el frontend para Gemini
+            // payload normal de Gemini: { contents: [{ role: "user", parts: [{ text: "el prompt" }] }] }
+            const geminiContents = body.payload?.contents || [];
+            let userPrompt = "Hola";
+
+            if (geminiContents.length > 0 && geminiContents[0].parts && geminiContents[0].parts.length > 0) {
+                userPrompt = geminiContents[0].parts[0].text;
+            }
+
+            // Llamar a Groq con el modelo Llama 3 70B (Súper inteligente y gratis)
+            const chatCompletion = await groq.chat.completions.create({
+                messages: [
+                    {
+                        role: "user",
+                        content: userPrompt,
+                    }
+                ],
+                model: "llama3-70b-8192", // Modelo gratuito de Groq
+                temperature: 0.5,
             });
-            const data = await response.json();
+
+            const groqResponseText = chatCompletion.choices[0]?.message?.content || "Sin respuesta";
+
+            // Formatear la respuesta de vuelta como si fuera Gemini para no romper tu frontend
+            const fakeGeminiResponse = {
+                candidates: [
+                    {
+                        content: {
+                            parts: [{ text: groqResponseText }]
+                        }
+                    }
+                ]
+            };
 
             return {
-                statusCode: response.status, // Devuelve el estado original (200, 400, etc.)
-                body: JSON.stringify(data)
+                statusCode: 200,
+                body: JSON.stringify(fakeGeminiResponse)
             };
         }
 
         return {
             statusCode: 400,
-            body: JSON.stringify({ error: 'Acción no válida. Se esperaba "getModels" o "generateContent".' })
+            body: JSON.stringify({ error: 'Acción no válida.' })
         };
 
     } catch (error) {
-        console.error("Error en la función de Netlify:", error);
+        console.error("Error en la función de Netlify (Groq):", error);
         return {
             statusCode: 500,
             body: JSON.stringify({ error: error.message })
