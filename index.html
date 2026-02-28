@@ -3797,18 +3797,20 @@
                         <p class="text-gray-500">Cargando datos de la finca...</p>
                     </div>
 
-                    <button id="analyze-farm-data-btn" class="bg-[#4A6C4B] hover:bg-[#385038] text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-300 flex items-center justify-center">
-                        Analizar Datos con Experto IA
-                        <span id="data-analysis-loading" class="spinner ml-2 hidden"></span>
-                    </button>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <button id="analyze-farm-data-btn" class="flex-1 bg-[#4A6C4B] hover:bg-[#385038] w-full sm:w-auto text-white font-bold py-3 px-4 rounded-md shadow-md transition-colors duration-300 flex items-center justify-center">
+                            Analizar Datos con Experto IA
+                            <span id="data-analysis-loading" class="spinner ml-2 hidden"></span>
+                        </button>
+                        
+                        <button id="export-pdf-report-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 w-full sm:w-auto text-gray-800 font-bold py-3 px-4 rounded-md shadow-md transition-colors duration-300 flex items-center justify-center gap-2 border border-gray-400">
+                            📄 Descargar Informe PDF
+                        </button>
+                    </div>
 
                     <div id="data-expert-response-container" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-gray-700 hidden">
                         <p class="font-semibold text-lg mb-2">Análisis del Experto Fitosanitario (IA):</p>
                         <div id="data-expert-content" class="prose max-w-none">Esperando análisis...</div>
-                        
-                        <button id="export-pdf-report-btn" class="mt-6 w-full bg-[#385038] text-white px-3 py-3 rounded-md text-sm hover:bg-[#2c3f2c] focus:outline-none transition-colors border border-green-700 font-bold shadow-md flex items-center justify-center gap-2">
-                            📄 Descargar Informe como PDF
-                        </button>
                     </div>
                 </div>
             `;
