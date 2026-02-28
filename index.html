@@ -3804,7 +3804,11 @@
 
                     <div id="data-expert-response-container" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-gray-700 hidden">
                         <p class="font-semibold text-lg mb-2">Análisis del Experto Fitosanitario (IA):</p>
-                        <div id="data-expert-content">Esperando análisis...</div>
+                        <div id="data-expert-content" class="prose max-w-none">Esperando análisis...</div>
+                        
+                        <button id="export-pdf-report-btn" class="mt-6 w-full bg-[#385038] text-white px-3 py-3 rounded-md text-sm hover:bg-[#2c3f2c] focus:outline-none transition-colors border border-green-700 font-bold shadow-md flex items-center justify-center gap-2">
+                            📄 Descargar Informe como PDF
+                        </button>
                     </div>
                 </div>
             `;
@@ -3908,38 +3912,38 @@
                 await getGeminiResponse(prompt, dataExpertContent, dataAnalysisLoading, dataExpertResponseContainer, analyzeFarmDataBtn);
             });
 
-            // Botón para Exportar a PDF el análisis de la pestaña de Datos
-            const exportPdfBtn = document.createElement('button');
-            exportPdfBtn.id = 'export-pdf-report-btn';
-            exportPdfBtn.className = 'mt-4 w-full bg-[#385038] text-white px-3 py-2 rounded text-sm hover:bg-[#2c3f2c] focus:outline-none transition-colors border border-green-700 font-bold';
-            exportPdfBtn.innerHTML = '⬇️ Descargar Informe como PDF';
-
-            // Lo insertamos dentro del contenedor de respuestas
-            if (dataExpertResponseContainer) {
-                dataExpertResponseContainer.appendChild(exportPdfBtn);
-
+            // Lógica para exportar el reporte a PDF
+            const exportPdfBtn = document.getElementById('export-pdf-report-btn');
+            if (exportPdfBtn) {
                 exportPdfBtn.addEventListener('click', () => {
-                    const element = dataExpertContent; // El div que tiene el html renderizado
-                    if (element.innerText.trim() === '') return alert('No hay informe generado aún.');
+                    const element = dataExpertContent;
+                    if (!element || element.innerText.trim() === '' || element.innerText.includes('Esperando análisis')) {
+                        return alert('Aún no hay un informe generado por la IA para exportar.');
+                    }
 
                     const opt = {
-                        margin: 10,
-                        filename: 'Informe_Fitosanitario_Olivo.pdf',
+                        margin: [15, 15, 15, 15],
+                        filename: 'Reporte_Fitosanitario_Olivo.pdf',
                         image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2 },
+                        html2canvas: { scale: 2, useCORS: true },
                         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
                     };
 
-                    // Aplicar un estilo temporal rápido para que el PDF se vea bien
-                    element.style.padding = '20px';
-                    element.style.color = '#000';
-                    element.style.fontSize = '12px';
+                    exportPdfBtn.innerHTML = '⏳ Generando PDF, espere...';
+                    exportPdfBtn.disabled = true;
+
+                    // Cambiamos colores de la app para asegurar que el PDF salga impecable (texto oscuro)
+                    const originalColor = element.style.color;
+                    element.style.color = '#000000';
 
                     html2pdf().from(element).set(opt).save().then(() => {
-                        // Restaurar estilos
-                        element.style.padding = '0';
-                        element.style.fontSize = '';
-                        element.style.color = '';
+                        element.style.color = originalColor;
+                        exportPdfBtn.innerHTML = '📄 Descargar Informe como PDF';
+                        exportPdfBtn.disabled = false;
+                    }).catch(err => {
+                        console.error('Error exportando:', err);
+                        exportPdfBtn.innerHTML = '📄 Descargar Informe como PDF';
+                        exportPdfBtn.disabled = false;
                     });
                 });
             }
