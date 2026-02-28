@@ -2442,11 +2442,13 @@
                     exportPdfManualDiagBtn.innerHTML = '⏳ Generando PDF...';
                     exportPdfManualDiagBtn.disabled = true;
 
-                    const originalColor = elementContent.style.color;
-                    elementContent.style.color = '#000000';
+                    // Creamos un string HTML limpio con estilos garantizados para el PDF
+                    const cleanHtml = `
+                    <div style="font-family: Arial, sans-serif; color: #000; font-size: 14px; background: #fff; padding: 20px;">
+                        ${elementContent.innerHTML}
+                    </div>`;
 
-                    html2pdf().from(elementContent).set(opt).save().then(() => {
-                        elementContent.style.color = originalColor;
+                    html2pdf().from(cleanHtml).set(opt).save().then(() => {
                         exportPdfManualDiagBtn.innerHTML = '📄 Descargar Diagnóstico PDF';
                         exportPdfManualDiagBtn.disabled = false;
                     }).catch(err => {
@@ -3990,12 +3992,13 @@
                     exportPdfBtn.innerHTML = '⏳ Generando PDF, espere...';
                     exportPdfBtn.disabled = true;
 
-                    // Cambiamos colores de la app para asegurar que el PDF salga impecable (texto oscuro)
-                    const originalColor = element.style.color;
-                    element.style.color = '#000000';
+                    // Creamos un string HTML limpio con estilos garantizados para el PDF
+                    const cleanHtml = `
+                    <div style="font-family: Arial, sans-serif; color: #000; font-size: 14px; background: #fff; padding: 20px;">
+                        ${element.innerHTML}
+                    </div>`;
 
-                    html2pdf().from(element).set(opt).save().then(() => {
-                        element.style.color = originalColor;
+                    html2pdf().from(cleanHtml).set(opt).save().then(() => {
                         exportPdfBtn.innerHTML = '📄 Descargar Informe como PDF';
                         exportPdfBtn.disabled = false;
                     }).catch(err => {
