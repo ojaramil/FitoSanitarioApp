@@ -1543,8 +1543,8 @@
             contentElement.textContent = 'Generando análisis experto...';
             responseContainerElement.classList.remove('hidden');
 
-            // Usando la función de Netlify para seguridad
-            const apiUrl = `/.netlify/functions/gemini`;
+            // Usando la función de Serverless en Vercel
+            const apiUrl = `/api/gemini`;
             const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
             const payload = { contents: chatHistory };
 
@@ -4041,7 +4041,7 @@
                     modelsResult.textContent = "🔍 Consultando modelos... Espere...";
                     // Ya no usamos API key directa, vamos a nuestra función
                     try {
-                        const url = `/.netlify/functions/gemini`;
+                        const url = `/api/gemini`;
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },

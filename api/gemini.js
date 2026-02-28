@@ -1,17 +1,18 @@
 const Groq = require("groq-sdk");
 
-exports.handler = async function (event, context) {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
+module.exports = async (req, res) => {
+    // Vercel serverless functions handle CORS and methods like this
+    if (req.method !== 'POST') {
+        return res.status(405).send('Method Not Allowed');
     }
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'La API Key de GROQ no está configurada en Netlify.' }) };
+        return res.status(500).json({ error: 'La API Key de GROQ no está configurada.' });
     }
 
     try {
-        const body = JSON.parse(event.body);
+        const body = req.body;
         const action = body.action;
 
         // Inicializamos el cliente de Groq con la llave
@@ -19,21 +20,17 @@ exports.handler = async function (event, context) {
 
         if (action === 'getModels') {
             // Groq no tiene un endpoint idéntico de listar modelos para publico general, mockeamos una respuesta exitosa
-            return {
-                statusCode: 200,
-                body: JSON.stringify({
-                    models: [
-                        { name: "Llama 3 8B (Groq Fast)" },
-                        { name: "Llama 3 70B (Groq Expert)" },
-                        { name: "Mixtral 8x7B" }
-                    ]
-                })
-            };
+            return res.status(200).json({
+                models: [
+                    { name: "Llama 3 8B (Groq Fast)" },
+                    { name: "Llama 3 70B (Groq Expert)" },
+                    { name: "Mixtral 8x7B" }
+                ]
+            });
         }
 
         if (action === 'generateContent') {
             // Extraer el texto del payload que mandaba el frontend para Gemini
-            // payload normal de Gemini: { contents: [{ role: "user", parts: [{ text: "el prompt" }] }] }
             const geminiContents = body.payload?.contents || [];
             let userPrompt = "Hola";
 
@@ -41,7 +38,7 @@ exports.handler = async function (event, context) {
                 userPrompt = geminiContents[0].parts[0].text;
             }
 
-            // Llamar a Groq con el modelo Llama 3 70B (Súper inteligente y gratis)
+            // Llamar a Groq con el modelo Llama 3 70B
             const chatCompletion = await groq.chat.completions.create({
                 messages: [
                     {
@@ -49,13 +46,13 @@ exports.handler = async function (event, context) {
                         content: userPrompt,
                     }
                 ],
-                model: "llama-3.3-70b-versatile", // Modelo actual y rápido de Groq
+                model: "llama-3.3-70b-versatile",
                 temperature: 0.5,
             });
 
             const groqResponseText = chatCompletion.choices[0]?.message?.content || "Sin respuesta";
 
-            // Formatear la respuesta de vuelta como si fuera Gemini para no romper tu frontend
+            // Formatear la respuesta de vuelta
             const fakeGeminiResponse = {
                 candidates: [
                     {
@@ -66,22 +63,13 @@ exports.handler = async function (event, context) {
                 ]
             };
 
-            return {
-                statusCode: 200,
-                body: JSON.stringify(fakeGeminiResponse)
-            };
+            return res.status(200).json(fakeGeminiResponse);
         }
 
-        return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'Acción no válida.' })
-        };
+        return res.status(400).json({ error: 'Acción no válida.' });
 
     } catch (error) {
-        console.error("Error en la función de Netlify (Groq):", error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: error.message })
-        };
+        console.error("Error en la función Serverless (Groq):", error);
+        return res.status(500).json({ error: error.message });
     }
 };
