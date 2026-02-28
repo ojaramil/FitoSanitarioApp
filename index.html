@@ -1685,9 +1685,6 @@
                 case 'clients-weather':
                     await renderClientsSection();
                     break;
-                case 'diagnosis-expert':
-                    await renderDiagnosisExpert();
-                    break;
                 case 'regenerative-approach':
                     await renderRegenerativeApproach();
                     break;
@@ -2245,6 +2242,40 @@
                     <p class="font-semibold text-lg mb-2">Análisis del Experto Fitosanitario (IA):</p>
                     <div id="manual-diag-expert-content" class="prose max-w-none">Esperando datos para análisis...</div>
                 </div>
+
+                <hr class="my-8 border-gray-300">
+                <h3 class="text-2xl font-bold text-[#385038] mb-4">Probabilidad de Enfermedades</h3>
+                <div class="chart-container mb-6" style="height: 300px;">
+                    <canvas id="todayDiseaseProbabilityChart"></canvas>
+                </div>
+                
+                <hr class="my-8 border-gray-300">
+
+                <h3 class="text-3xl font-bold text-[#385038] mb-6">❓ Diagnóstico por Síntomas o Consulta al Experto</h3>
+                <p class="text-gray-700 mb-4">Describe los síntomas que observas en tus olivos o haz una pregunta general a nuestro experto en IA.</p>
+                
+                <div class="mb-4">
+                    <textarea id="symptom-description-input" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4A6C4B]" rows="6" placeholder="Ej: Las hojas se están poniendo amarillas y se caen, con unas manchas circulares marrones. Algunos frutos tienen perforaciones y están blandos."></textarea>
+                </div>
+                <button id="diagnose-symptoms-btn" class="bg-[#4A6C4B] hover:bg-[#385038] text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-300 flex items-center justify-center">
+                    Diagnosticar Síntomas
+                    <span id="symptom-diagnosis-loading" class="spinner ml-2 hidden"></span>
+                </button>
+
+                <h3 class="text-2xl font-bold text-[#385038] mt-8 mb-4">Consulta General al Experto</h3>
+                <p class="text-gray-700 mb-4">¿Tienes una pregunta específica sobre plagas, enfermedades o el manejo del olivo?</p>
+                <div class="mb-4">
+                    <textarea id="gemini-query" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4A6C4B]" rows="4" placeholder="Ej: ¿Cómo afecta el clima seco a la mosca del olivo en Villa de Leyva?"></textarea>
+                </div>
+                <button id="ask-gemini-btn" class="bg-[#4A6C4B] hover:bg-[#385038] text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-300 flex items-center justify-center">
+                    Consultar Experto
+                    <span id="gemini-loading" class="spinner ml-2 hidden"></span>
+                </button>
+
+                <div id="unified-expert-response" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-gray-700 hidden">
+                    <p class="font-semibold text-lg mb-2">Respuesta del Experto:</p>
+                    <div id="unified-expert-content"></div>
+                </div>
             `;
 
             // Elementos para la visualización de datos de la finca
@@ -2401,6 +2432,9 @@
 
                 await getGeminiResponse(aiPrompt, manualDiagExpertContent, manualDiagLoading, manualDiagExpertResponseContainer, generateManualDiagnosisBtn);
 
+                // También actualizar el gráfico de probabilidad de enfermedades en esta misma vista
+                updateDiseaseChart(climateData);
+
                 // GUARDAR DIAGNÓSTICO EN FIREBASE
                 if (window.currentFarmId && window.userId) {
                     try {
@@ -2469,6 +2503,54 @@
                     });
                 });
             }
+
+            // --- LOGIC FOR SYMPTOM AND EXPERT ---
+            const symptomDescriptionInput = document.getElementById('symptom-description-input');
+            const diagnoseSymptomsBtn = document.getElementById('diagnose-symptoms-btn');
+            const symptomDiagnosisLoading = document.getElementById('symptom-diagnosis-loading');
+            const geminiQueryInput = document.getElementById('gemini-query');
+            const askGeminiBtn = document.getElementById('ask-gemini-btn');
+            const geminiLoading = document.getElementById('gemini-loading');
+            const unifiedExpertResponse = document.getElementById('unified-expert-response');
+            const unifiedExpertContent = document.getElementById('unified-expert-content');
+
+            if (diagnoseSymptomsBtn) diagnoseSymptomsBtn.addEventListener('click', async () => {
+                const symptomDescription = symptomDescriptionInput.value.trim();
+                if (!symptomDescription) {
+                    if (unifiedExpertContent) unifiedExpertContent.textContent = 'Por favor, describe los síntomas.';
+                    if (unifiedExpertResponse) unifiedExpertResponse.classList.remove('hidden');
+                    return;
+                }
+
+                const aiContext = getAIContextData(); // Obtener el contexto unificado
+
+                const diagnosisPrompt = `Actúa como un experto en fitosanidad de olivos, con especialización en el clima y las plagas comunes de la región de Villa de Leyva y Sáchica, Colombia. La finca del agricultor se llama "${aiContext.farmName}" ubicada ${aiContext.farmLocation}${aiContext.farmGPS}. Descripción: "${aiContext.farmDescription}". Un agricultor ha observado los siguientes síntomas en sus olivos: "${symptomDescription}".
+
+                Además, sepa que el agricultor ha seleccionado las siguientes prácticas regenerativas generales: ${aiContext.selectedPracticesContext}
+                También tiene disponibles o está considerando usar los siguientes bio-insumos/productos regenerativos: ${aiContext.selectedProductsContext}.
+                Considera especialmente las siguientes plagas y enfermedades: ${aiContext.selectedPestNames}.
+
+                Por favor, proporciona:
+                1.  Un diagnóstico conciso de las 2-3 posibles plagas o enfermedades más probables que podrían estar causando estos síntomas, de entre las seleccionadas o todas si no hay selección.
+                2.  Para cada diagnóstico, sugiere una o dos estrategias de manejo ecológicas/regenerativas relevantes y aplicables a la olivicultura de la región, haciendo referencia a las prácticas y productos que el agricultor ha indicado como disponibles.
+                3.  Si los síntomas son demasiado vagos para un diagnóstico claro, menciona que se necesita más información y qué tipo de información adicional sería útil.`;
+
+                await getGeminiResponse(diagnosisPrompt, unifiedExpertContent, symptomDiagnosisLoading, unifiedExpertResponse, diagnoseSymptomsBtn);
+            });
+
+            if (askGeminiBtn) askGeminiBtn.addEventListener('click', async () => {
+                const query = geminiQueryInput.value.trim();
+                if (!query) {
+                    if (unifiedExpertContent) unifiedExpertContent.textContent = 'Por favor, introduce tu pregunta.';
+                    if (unifiedExpertResponse) unifiedExpertResponse.classList.remove('hidden');
+                    return;
+                }
+
+                const aiContext = getAIContextData(); // Obtener el contexto unificado
+
+                const generalQueryPrompt = `Actúa como un experto en fitosanidad de olivos especializado en Villa de Leyva y Sáchica, Colombia. La finca del agricultor se llama "${aiContext.farmName}" ubicada ${aiContext.farmLocation}${aiContext.farmGPS}. Descripción: "${aiContext.farmDescription}". El agricultor tiene las siguientes prácticas regenerativas generales seleccionadas: ${aiContext.selectedPracticesContext} Además, tiene disponibles o está considerando usar los siguientes bio-insumos/productos regenerativos: ${aiContext.selectedProductsContext}. Considera las siguientes plagas y enfermedades: ${aiContext.selectedPestNames}. Responde la siguiente pregunta de forma concisa y útil: ${query}`;
+                await getGeminiResponse(generalQueryPrompt, unifiedExpertContent, geminiLoading, unifiedExpertResponse, askGeminiBtn);
+            });
         }
 
         /**
@@ -2528,7 +2610,7 @@
                     </div>
                 </div>
 
-                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div class="grid md:grid-cols-1 gap-6 mb-6">
                     <div>
                         <h4 class="font-bold text-xl text-gray-700 mb-2">Condiciones Climáticas (Reales)</h4>
                         <p><strong>Fecha:</strong> <span id="today-weather-date-display" class="font-semibold">--</span></p>
@@ -2538,12 +2620,7 @@
                         <p><strong>Viento:</strong> <span id="today-weather-wind" class="font-semibold">--</span></p>
                         <p><strong>Riego Sugerido:</strong> <span id="today-weather-irrigation" class="font-semibold">--</span></p>
                     </div>
-                    <div>
-                         <h4 class="font-bold text-xl text-gray-700 mb-4">Probabilidad de Enfermedades</h4>
-                         <div class="chart-container" style="height: 200px;">
-                            <canvas id="todayDiseaseProbabilityChart"></canvas>
-                        </div>
-                    </div>
+
                 </div>
 
                 <h3 class="text-2xl font-bold text-[#385038] mt-6 mb-4">🤖 Análisis del Experto (Gemini)</h3>
@@ -2823,6 +2900,8 @@
             ));
 
             const ctx = document.getElementById('todayDiseaseProbabilityChart');
+            if (!ctx) return; // Prevent crash if element is not in DOM
+
             if (window.myChart) window.myChart.destroy();
 
             window.myChart = new Chart(ctx, {
@@ -3253,86 +3332,6 @@
         /**
          * Renderiza la sección "Diagnóstico/Experto".
          */
-        async function renderDiagnosisExpert() {
-            contentDisplay.innerHTML = `
-                <h2 class="text-3xl font-bold text-[#385038] mb-6">❓ Diagnóstico/Experto</h2>
-                <p class="text-gray-700 mb-4">Describe los síntomas que observas en tus olivos o haz una pregunta general a nuestro experto en IA.</p>
-                
-                <h3 class="text-2xl font-bold text-[#385038] mb-4">Diagnóstico por Síntomas</h3>
-                <div class="mb-4">
-                    <textarea id="symptom-description-input" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4A6C4B]" rows="6" placeholder="Ej: Las hojas se están poniendo amarillas y se caen, con unas manchas circulares marrones. Algunos frutos tienen perforaciones y están blandos."></textarea>
-                </div>
-                <button id="diagnose-symptoms-btn" class="bg-[#4A6C4B] hover:bg-[#385038] text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-300 flex items-center justify-center">
-                    Diagnosticar Síntomas
-                    <span id="symptom-diagnosis-loading" class="spinner ml-2 hidden"></span>
-                </button>
-
-                <hr class="my-8 border-gray-300">
-
-                <h3 class="text-2xl font-bold text-[#385038] mb-4">Consulta General al Experto</h3>
-                <p class="text-gray-700 mb-4">¿Tienes una pregunta específica sobre plagas, enfermedades o el manejo del olivo?</p>
-                <div class="mb-4">
-                    <textarea id="gemini-query" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#4A6C4B]" rows="4" placeholder="Ej: ¿Cómo afecta el clima seco a la mosca del olivo en Villa de Leyva?"></textarea>
-                </div>
-                <button id="ask-gemini-btn" class="bg-[#4A6C4B] hover:bg-[#385038] text-white font-bold py-2 px-4 rounded-md shadow-md transition-colors duration-300 flex items-center justify-center">
-                    Consultar Experto
-                    <span id="gemini-loading" class="spinner ml-2 hidden"></span>
-                </button>
-
-                <div id="unified-expert-response" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md text-gray-700 hidden">
-                    <p class="font-semibold text-lg mb-2">Respuesta del Experto:</p>
-                    <div id="unified-expert-content"></div>
-                </div>
-            `;
-
-            const symptomDescriptionInput = document.getElementById('symptom-description-input');
-            const diagnoseSymptomsBtn = document.getElementById('diagnose-symptoms-btn');
-            const symptomDiagnosisLoading = document.getElementById('symptom-diagnosis-loading');
-            const geminiQueryInput = document.getElementById('gemini-query');
-            const askGeminiBtn = document.getElementById('ask-gemini-btn');
-            const geminiLoading = document.getElementById('gemini-loading');
-            const unifiedExpertResponse = document.getElementById('unified-expert-response');
-            const unifiedExpertContent = document.getElementById('unified-expert-content');
-
-            if (diagnoseSymptomsBtn) diagnoseSymptomsBtn.addEventListener('click', async () => {
-                const symptomDescription = symptomDescriptionInput.value.trim();
-                if (!symptomDescription) {
-                    if (unifiedExpertContent) unifiedExpertContent.textContent = 'Por favor, describe los síntomas.';
-                    if (unifiedExpertResponse) unifiedExpertResponse.classList.remove('hidden');
-                    return;
-                }
-
-                const aiContext = getAIContextData(); // Obtener el contexto unificado
-
-                const diagnosisPrompt = `Actúa como un experto en fitosanidad de olivos, con especialización en el clima y las plagas comunes de la región de Villa de Leyva y Sáchica, Colombia. La finca del agricultor se llama "${aiContext.farmName}" ubicada ${aiContext.farmLocation}${aiContext.farmGPS}. Descripción: "${aiContext.farmDescription}". Un agricultor ha observado los siguientes síntomas en sus olivos: "${symptomDescription}".
-
-                Además, sepa que el agricultor ha seleccionado las siguientes prácticas regenerativas generales: ${aiContext.selectedPracticesContext}
-                También tiene disponibles o está considerando usar los siguientes bio-insumos/productos regenerativos: ${aiContext.selectedProductsContext}.
-                Considera especialmente las siguientes plagas y enfermedades: ${aiContext.selectedPestNames}.
-
-                Por favor, proporciona:
-                1.  Un diagnóstico conciso de las 2-3 posibles plagas o enfermedades más probables que podrían estar causando estos síntomas, de entre las seleccionadas o todas si no hay selección.
-                2.  Para cada diagnóstico, sugiere una o dos estrategias de manejo ecológicas/regenerativas relevantes y aplicables a la olivicultura de la región, haciendo referencia a las prácticas y productos que el agricultor ha indicado como disponibles.
-                3.  Si los síntomas son demasiado vagos para un diagnóstico claro, menciona que se necesita más información y qué tipo de información adicional sería útil.`;
-
-                await getGeminiResponse(diagnosisPrompt, unifiedExpertContent, symptomDiagnosisLoading, unifiedExpertResponse, diagnoseSymptomsBtn);
-            });
-
-            if (askGeminiBtn) askGeminiBtn.addEventListener('click', async () => {
-                const query = geminiQueryInput.value.trim();
-                if (!query) {
-                    if (unifiedExpertContent) unifiedExpertContent.textContent = 'Por favor, introduce tu pregunta.';
-                    if (unifiedExpertResponse) unifiedExpertResponse.classList.remove('hidden');
-                    return;
-                }
-
-                const aiContext = getAIContextData(); // Obtener el contexto unificado
-
-                const generalQueryPrompt = `Actúa como un experto en fitosanidad de olivos especializado en Villa de Leyva y Sáchica, Colombia. La finca del agricultor se llama "${aiContext.farmName}" ubicada ${aiContext.farmLocation}${aiContext.farmGPS}. Descripción: "${aiContext.farmDescription}". El agricultor tiene las siguientes prácticas regenerativas generales seleccionadas: ${aiContext.selectedPracticesContext} Además, tiene disponibles o está considerando usar los siguientes bio-insumos/productos regenerativos: ${aiContext.selectedProductsContext}. Considera las siguientes plagas y enfermedades: ${aiContext.selectedPestNames}. Responde la siguiente pregunta de forma concisa y útil: ${query}`;
-                await getGeminiResponse(generalQueryPrompt, unifiedExpertContent, geminiLoading, unifiedExpertResponse, askGeminiBtn);
-            });
-        }
-
         /**
          * Renderiza la sección "Enfermedades del Olivo".
          */
@@ -4074,7 +4073,6 @@
             { id: 'today-data', label: 'Datos Hoy y Historial' },
             { id: 'villa-de-leyva-weather', label: 'Clima Villa de Leyva' },
             { id: 'regenerative-approach', label: 'Enfoque Regenerativo' },
-            { id: 'diagnosis-expert', label: 'Diagnóstico/Experto' },
             { id: 'data', label: 'Datos' }, // Nueva pestaña 'Data'
             { id: 'clients-weather', label: 'Clientes' }
         ];
