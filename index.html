@@ -2442,19 +2442,30 @@
                     exportPdfManualDiagBtn.innerHTML = '⏳ Generando PDF...';
                     exportPdfManualDiagBtn.disabled = true;
 
-                    // Creamos un string HTML limpio con estilos garantizados para el PDF
-                    const cleanHtml = `
-                    <div style="font-family: Arial, sans-serif; color: #000; font-size: 14px; background: #fff; padding: 20px;">
-                        ${elementContent.innerHTML}
-                    </div>`;
+                    // Crear contenedor temporal DOM
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = elementContent.innerHTML;
+                    tempDiv.style.fontFamily = 'Arial, sans-serif';
+                    tempDiv.style.color = '#000000';
+                    tempDiv.style.fontSize = '14px';
+                    tempDiv.style.background = '#ffffff';
+                    tempDiv.style.padding = '20px';
+                    tempDiv.style.width = '800px';
+                    tempDiv.style.position = 'absolute';
+                    tempDiv.style.left = '-9999px';
+                    tempDiv.style.top = '-9999px';
 
-                    html2pdf().from(cleanHtml).set(opt).save().then(() => {
+                    document.body.appendChild(tempDiv);
+
+                    html2pdf().from(tempDiv).set(opt).save().then(() => {
                         exportPdfManualDiagBtn.innerHTML = '📄 Descargar Diagnóstico PDF';
                         exportPdfManualDiagBtn.disabled = false;
+                        document.body.removeChild(tempDiv);
                     }).catch(err => {
                         console.error('Error exportando:', err);
                         exportPdfManualDiagBtn.innerHTML = '📄 Descargar Diagnóstico PDF';
                         exportPdfManualDiagBtn.disabled = false;
+                        if (document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
                     });
                 });
             }
@@ -3992,19 +4003,30 @@
                     exportPdfBtn.innerHTML = '⏳ Generando PDF, espere...';
                     exportPdfBtn.disabled = true;
 
-                    // Creamos un string HTML limpio con estilos garantizados para el PDF
-                    const cleanHtml = `
-                    <div style="font-family: Arial, sans-serif; color: #000; font-size: 14px; background: #fff; padding: 20px;">
-                        ${element.innerHTML}
-                    </div>`;
+                    // Crear contenedor temporal DOM
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = element.innerHTML;
+                    tempDiv.style.fontFamily = 'Arial, sans-serif';
+                    tempDiv.style.color = '#000000';
+                    tempDiv.style.fontSize = '14px';
+                    tempDiv.style.background = '#ffffff';
+                    tempDiv.style.padding = '20px';
+                    tempDiv.style.width = '800px';
+                    tempDiv.style.position = 'absolute';
+                    tempDiv.style.left = '-9999px';
+                    tempDiv.style.top = '-9999px';
 
-                    html2pdf().from(cleanHtml).set(opt).save().then(() => {
+                    document.body.appendChild(tempDiv);
+
+                    html2pdf().from(tempDiv).set(opt).save().then(() => {
                         exportPdfBtn.innerHTML = '📄 Descargar Informe como PDF';
                         exportPdfBtn.disabled = false;
+                        document.body.removeChild(tempDiv);
                     }).catch(err => {
                         console.error('Error exportando:', err);
                         exportPdfBtn.innerHTML = '📄 Descargar Informe como PDF';
                         exportPdfBtn.disabled = false;
+                        if (document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
                     });
                 });
             }
