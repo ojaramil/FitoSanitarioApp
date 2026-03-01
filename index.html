@@ -2979,9 +2979,38 @@
             });
         }
 
-        /**
-         * Renderiza la sección "Diagnóstico/Experto".
-         */
+        function updateDiseaseChart(weather) {
+            // Reutilizar lógica existente de calculateProbability
+            const aiContext = getAIContextData();
+            const chartPestData = aiContext.relevantPests;
+            const diseaseChartLabels = chartPestData.map(p => wrapLabel(`${p.icon} ${p.name}`));
+
+            // (Se asume que calculateProbability existe y funciona con datos numéricos)
+            const diseaseChartData = chartPestData.map(p => calculateProbability(
+                p, new Date(), weather.minTemp, weather.maxTemp, weather.numericalHumidity, weather.numericalPrecip
+            ));
+
+            const ctx = document.getElementById('todayDiseaseProbabilityChart');
+            if (!ctx) return; // Prevent crash si el contenedor de canvas no está montado visualmente
+
+            if (window.myChart) window.myChart.destroy();
+
+            window.myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: diseaseChartLabels,
+                    datasets: [{
+                        label: 'Riesgo (0-10)',
+                        data: diseaseChartData,
+                        backgroundColor: '#A3B9A3',
+                        borderColor: '#4A6C4B',
+                        borderWidth: 1
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
+
         /**
          * Renderiza la sección "Enfermedades del Olivo".
          */
