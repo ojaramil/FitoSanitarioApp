@@ -316,6 +316,17 @@
                         class="flex-1 bg-[#4A6C4B] text-white font-bold py-2 px-4 rounded hover:bg-[#385038]">Crear</button>
                 </div>
             </div>
+
+            <!-- Cargar Fincas por ID Form -->
+            <div class="mt-6 pt-4 border-t border-gray-200">
+                <h3 class="text-sm font-bold text-gray-500 mb-2">¿Tienes un código de Agricultor (ID)?</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="manual-load-user-id" placeholder="Pega tu ID aquí..."
+                        class="flex-1 p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-[#4A6C4B]">
+                    <button id="btn-manual-load-user"
+                        class="bg-blue-600 text-white font-bold py-2 px-3 rounded hover:bg-blue-700 text-sm transition-colors">Cargar</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1090,7 +1101,12 @@
                 window.auth = getAuth(window.firebaseApp);
 
                 onAuthStateChanged(window.auth, async (user) => {
-                    if (user) {
+                    const savedOverrideId = localStorage.getItem('overrideUserId');
+                    
+                    if (savedOverrideId) {
+                        window.userId = savedOverrideId;
+                        logStatus("✅ Usando ID guardado (Manual): " + savedOverrideId.substring(0, 5) + "...");
+                    } else if (user) {
                         window.userId = user.uid;
                         logStatus("✅ Usuario autenticado: " + user.uid.substring(0, 5) + "...");
                     } else {
@@ -1145,6 +1161,25 @@
         if (btnChangeFarm) {
             btnChangeFarm.addEventListener('click', () => {
                 farmSelectorModal.classList.add('active');
+            });
+        }
+
+
+        const manualLoadUserIdInput = document.getElementById('manual-load-user-id');
+        const btnManualLoadUser = document.getElementById('btn-manual-load-user');
+        
+        if (btnManualLoadUser) {
+            btnManualLoadUser.addEventListener('click', () => {
+                const manualId = manualLoadUserIdInput.value.trim();
+                if (manualId) {
+                    window.userId = manualId;
+                    localStorage.setItem('overrideUserId', manualId);
+                    localStorage.removeItem('currentFarmId'); // Clear farm cache when switching users
+                    alert('Código de agricultor cargado. Buscando fincas...');
+                    loadFarmsList();
+                } else {
+                    alert('Por favor, ingresa un código válido (ID).');
+                }
             });
         }
 
